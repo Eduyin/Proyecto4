@@ -1,6 +1,7 @@
 const {Schema, model} = require('mongoose');
 
 const project = new Schema({
+    id: Number,
     nombre: String,
     objetivos_generales : String,
     objetivos_especificos : String,
