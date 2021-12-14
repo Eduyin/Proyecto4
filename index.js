@@ -1,6 +1,7 @@
 require('./infraestructura/conectionBD');
 const Project = require('./model/proyectoModel');
 const User = require('./model/usuarioModel');
+
 const express = require('express')
 const aes256 = require('aes256');
 
@@ -9,6 +10,8 @@ const aes256 = require('aes256');
 const {gql,ApolloServer} = require('apollo-server-express')
 
 const typeDefs = gql`
+
+scalar Date
 type Usuario{
     nombre: String
     identificacion: Int
@@ -22,15 +25,35 @@ type Proyecto{
     nombre: String
     objetivos_generales : String
     objetivos_especificos: String
-    presupuesto: Int
-    fecha_inicio: String
-    Fecha_terminacion: String
+    presupuesto:Int
+    fecha_inicio: Date
+    fecha_terminacion: Date
     documento: String
     lider: String
     fase: String
     facultad: String
+    
+    avances:[avances]
+    inscripciones:[inscripciones]
+    
+    
 
 
+}
+
+type  avances  {
+    id_avance : String
+    fecha_avance : Date
+    descripcion : String
+    observaciones_lider : String 
+}
+
+type inscripciones{
+    id_inscripcion : String
+    identificacion_estudiante:String
+    estado_inscripcion:String
+    fecha_ingreso:Date
+    fecha_egreso:Date
 }
 
 type Query{
@@ -38,6 +61,9 @@ type Query{
         usuario(identificacion: Int):Usuario
         proyectos:[Proyecto]
         getProject(nombre: String):Proyecto
+        getProjectInscri(id_estudiante:String, estado_inscripcion:String):Proyecto
+        
+        
     }
 
 input UserInput{
@@ -48,9 +74,14 @@ input UserInput{
     correo: String
 }
 
+
 type Mutation{
     createUser(user:UserInput):String
     activeUser(identificacion:Int):String
+    updateInscripcionProyecto(nombre:String, id_inscripcion:String, identificacion_estudiante:String):String
+    updateDescripcionAvance(nombre:String, id_avance:String, descripcion:String ):String
+    updateNuevoAvance(nombre:String, id_avance:String, fecha_avance:Date, descripcion:String):String
+
 }
 `
 
@@ -89,12 +120,16 @@ const resolvers ={
         proyectos: async ()=>await Project.find({}),
         getProject:async(parent, args, context, info) => await Project.findOne({nombre:args.nombre}),
         
+
+        
+        
+        
     },
     Mutation:{
         createUser: (parent,args,context, info)=>{
             const {contrasena} = args.user;
-            // const {nombre, identificacion, contrasena, tipo_usuario, correo} = args.user;
-            const nuevoUsuario = new User(args.user);
+            // const {nombre, identificacion, contrasena, tipo_usuario, correo,avances} = args.user;
+            
             
             //const buffer = Buffer.from(plaintext);
             const encryptedPlainText = aes256.encrypt(key, contrasena);
@@ -107,8 +142,51 @@ const resolvers ={
                 },
 
         activeUser: async (parent,args,context, info)=>{
-            const resp = await User.updateOne({identificacion:args.identificacion},{estado:"activo"})
-            console.log(resp);
+            return User.updateOne({identificacion:args.identificacion},{estado:"activo"})
+                .then(u=>"Usuario activado")
+                .catch(err=>"Fallo activacion");
+        },
+
+        
+
+        updateInscripcionProyecto: async(parent, args, context, info) => {
+            try {
+                const project = await Project.findOne({nombre : args.nombre })
+             await  Project.updateOne({"nombre": project.nombre},{$push: {"inscripciones": {"id_inscripcion":args.id_inscripcion, "identificacion_estudiante":args.identificacion_estudiante, "estado_inscripcion":"Pendiente"}}})
+            
+                return "Inscripcion creada " 
+            
+            } catch (error) {
+                console.log(error)
+            }
+        },
+
+        updateNuevoAvance: async(parent, args, context, info) => {
+            try {
+                const project = await Project.findOne({nombre : args.nombre })
+             await  Project.updateOne({"nombre": project.nombre},{$push: {"avances": {"id_avance":args.id_avance, "fecha_avance":args.fecha_avance, "descripcion":args.descripcion}}})
+            
+                return "Inscripcion creada " 
+            
+            } catch (error) {
+                console.log(error)
+            }
+        },
+
+        updateDescripcionAvance: async(parent, args, context, info) => {
+            try {
+                const project = await Project.findOne({nombre : args.nombre })
+             await  Project.updateOne({"nombre": project.nombre},{$set: {"avances.$[avc].descripcion": args.descripcion}},{arrayFilters:[{"avc.id_avance": {$eq: (args.id_avance)}},]})
+            //     if (project.estado_proyecto == "Activo"){
+            //     await Project.updateOne({ _id : project.id }, {  $set: {objetivos_generales: args.project.objetivos_generales,objetivos_especificos: args.project.objetivos_especificos,  presupuesto: args.project.presupuesto,nombre:args.project.nombre} })
+            //     return "proyecto Actualizado "
+            // }
+            // else {
+                return "descripcion avance actualizada " 
+            // }
+            } catch (error) {
+                console.log(error)
+            }
         }
 
 
