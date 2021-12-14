@@ -78,6 +78,7 @@ input UserInput{
 type Mutation{
     createUser(user:UserInput):String
     activeUser(identificacion:Int):String
+    updateUser(identificacion:Int, nombre:String, estado:String, Correo:String)
     updateInscripcionProyecto(nombre:String, id_inscripcion:String, identificacion_estudiante:String):String
     updateDescripcionAvance(nombre:String, id_avance:String, descripcion:String ):String
     updateNuevoAvance(nombre:String, id_avance:String, fecha_avance:Date, descripcion:String):String
@@ -145,6 +146,22 @@ const resolvers ={
             return User.updateOne({identificacion:args.identificacion},{estado:"activo"})
                 .then(u=>"Usuario activado")
                 .catch(err=>"Fallo activacion");
+        },
+
+        updateUser: async(parent, args, context, info) => {
+            try {
+                const user = await User.findOne({identificacion : args.identiicacion })
+             await  User.updateOne({"identificacion": user.identificacion},{$set: {"nombre": args.user.nombre, "identificacion": args.user.identificacion, "estado": args.user.estado, "contrasena": args.user.contrasena, "correo":}})
+            //     if (project.estado_proyecto == "Activo"){
+            //     await Project.updateOne({ _id : project.id }, {  $set: {objetivos_generales: args.project.objetivos_generales,objetivos_especificos: args.project.objetivos_especificos,  presupuesto: args.project.presupuesto,nombre:args.project.nombre} })
+            //     return "proyecto Actualizado "
+            // }
+            // else {
+                return "descripcion avance actualizada " 
+            // }
+            } catch (error) {
+                console.log(error)
+            }
         },
 
         
